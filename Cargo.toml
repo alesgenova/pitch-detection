@@ -1,0 +1,10 @@
+[package]
+name = "pitch-detection"
+version = "0.1.0"
+authors = ["Alessandro Genova <ales.genova@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+rustfft = "3.0.0"
+num-traits = "0.2"
+num-complex = "0.2"
