@@ -14,6 +14,16 @@ enum ComplexComponent {
     Im
 }
 
+enum PeakCorrection {
+    Quadratic,
+    None
+}
+
+struct Point<T: FloatCore> {
+    x: T,
+    y: T
+}
+
 pub trait PitchDetector<T>
     where T : FloatCore
 {
@@ -95,10 +105,18 @@ impl<T> PitchDetector<T> for AutocorrelationDetector<T>
         let threshold = threshold * autocorr[0];
         let peaks = detect_peaks(autocorr);
         let chosen_peak = choose_peak(&peaks, threshold);
+        let chosen_peak = match chosen_peak {
+            Some(peak) => {
+                 Some(correct_peak(peak, autocorr, PeakCorrection::None))
+            },
+            None => {
+                None
+            }
+        };
 
         let pitch = match chosen_peak {
             Some(peak) => {
-                let frequency = T::from_usize(sample_rate).unwrap() / T::from_usize(peak.0).unwrap();
+                let frequency = T::from_usize(sample_rate).unwrap() / peak.0;
                 let clarity = peak.1 / autocorr[0];
                 Some(Pitch { frequency, clarity })
             },
@@ -173,20 +191,35 @@ fn choose_peak<T: FloatCore>(peaks: &[(usize, T)], threshold: T) -> Option<(usiz
     let mut chosen: Option<(usize, T)> = None;
     for &peak in peaks {
         if peak.1 > threshold {
-            return Some(peak);
-        }
-        match chosen {
-            Some(prev) => {
-                if peak.1 > prev.1 {
-                    chosen = Some(peak);
-                }
-            },
-            None => {
-                chosen = Some(peak);
-            }
+            chosen = Some(peak);
+            break;
         }
     }
     chosen
+}
+
+fn correct_peak<T: FloatCore>(peak: (usize, T), data: &[T], correction: PeakCorrection) -> (T, T) {
+    match correction {
+        PeakCorrection::Quadratic => {
+            let idx = peak.0;
+            let point = quadratic_interpolation(
+                Point{x: T::from_usize(idx - 1).unwrap(), y: data[idx - 1]},
+                Point{x: T::from_usize(idx).unwrap(), y: data[idx]},
+                Point{x: T::from_usize(idx + 1).unwrap(), y: data[idx + 1]},
+            );
+            return (point.x, point.y);
+        },
+        PeakCorrection::None => {
+            return (T::from_usize(peak.0).unwrap(), peak.1);
+        }
+    }
+}
+
+fn quadratic_interpolation<T:FloatCore>(left: Point<T>, center: Point<T>, right: Point<T>) -> Point<T> {
+    let shift = T::from_f64(0.5).unwrap() * (right.y - left.y) / (T::from_f64(2.0).unwrap() * center.y - left.y - right.y);
+    let x = center.x + shift;
+    let y = center.y + T::from_f64(0.25).unwrap() * (right.y - left.y) * shift;
+    Point { x, y }
 }
 
 fn new_real_buffer<T: FloatCore>(size: usize) -> Vec<T> {
@@ -272,8 +305,18 @@ mod tests {
             let y = x.sin();
             signal[i] = T::from(y).unwrap();
         }
-        println!("{}", size);
         signal
+    }
+
+    #[test]
+    fn peak_correction() {
+        let point = quadratic_interpolation(
+            Point{x: -1.5, y: - (1.5 * 1.5) + 4.0},
+            Point{x: -0.5, y: - (0.5 * 0.5) + 4.0},
+            Point{x: 0.5, y: - (0.5 * 0.5) + 4.0}
+        );
+        assert_eq!(point.x, 0.0);
+        assert_eq!(point.y, 4.0);
     }
 
     #[test]
