@@ -5,6 +5,6 @@ authors = ["Alessandro Genova <ales.genova@gmail.com>"]
 edition = "2018"
 
 [dependencies]
-rustfft = "3.0.0"
-num-traits = "0.2"
-num-complex = "0.2"
+rustfft = { version = "3.0.0", default-features = false }
+num-traits = { version = "0.2", default-features = false }
+num-complex = { version = "0.2", default-features = false }

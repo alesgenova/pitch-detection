@@ -27,7 +27,7 @@ struct Point<T: FloatCore> {
 pub trait PitchDetector<T>
     where T : FloatCore
 {
-    fn get_pitch(&mut self, signal: &[T], sample_rate: usize, threshold: T) -> Option<Pitch<T>>;
+    fn get_pitch(&mut self, signal: &[T], sample_rate: usize, power_threshold: T, clarity_threshold: T) -> Option<Pitch<T>>;
 }
 
 pub struct Pitch<T>
@@ -92,7 +92,7 @@ impl<T> AutocorrelationDetector<T>
 impl<T> PitchDetector<T> for AutocorrelationDetector<T>
     where T : FloatCore
 {
-    fn get_pitch(&mut self, signal: &[T], sample_rate: usize, threshold: T) -> Option<Pitch<T>> {
+    fn get_pitch(&mut self, signal: &[T], sample_rate: usize, power_threshold: T, clarity_threshold: T) -> Option<Pitch<T>> {
         assert_eq!(signal.len(), self.internals.size);
 
         let (signal_complex, rest) = self.internals.complex_buffers.split_first_mut().unwrap();
@@ -102,9 +102,13 @@ impl<T> PitchDetector<T> for AutocorrelationDetector<T>
         copy_real_to_complex(signal, signal_complex, ComplexComponent::Re);
         autocorrelation(signal_complex, scratch, autocorr);
 
-        let threshold = threshold * autocorr[0];
+        if autocorr[0] / T::from_usize(signal.len()).unwrap() < power_threshold {
+            return None;
+        }
+
+        let clarity_threshold = clarity_threshold * autocorr[0];
         let peaks = detect_peaks(autocorr);
-        let chosen_peak = choose_peak(&peaks, threshold);
+        let chosen_peak = choose_peak(&peaks, clarity_threshold);
         let chosen_peak = match chosen_peak {
             Some(peak) => {
                  Some(correct_peak(peak, autocorr, PeakCorrection::None))
@@ -329,7 +333,8 @@ mod tests {
         const PADDING : usize = WINDOW / 2;
         const DELTA_T : usize = WINDOW / 4;
         const N_WINDOWS : usize = (SAMPLE_SIZE - WINDOW) / DELTA_T;
-        const THRESHOLD : f64 = 0.5;
+        const POWER_THRESHOLD : f64 = 500.0;
+        const CLARITY_THRESHOLD : f64 = 0.5;
 
         let signal = sin_signal::<f64>(FREQUENCY, SAMPLE_SIZE, SAMPLE_RATE);
 
@@ -341,7 +346,7 @@ mod tests {
             let t : usize = i * DELTA_T;
             get_chunk(&signal, t, WINDOW, &mut chunk);
 
-            let pitch = detector.get_pitch(&chunk, SAMPLE_RATE, THRESHOLD);
+            let pitch = detector.get_pitch(&chunk, SAMPLE_RATE, POWER_THRESHOLD, CLARITY_THRESHOLD);
 
             match pitch {
                 Some(pitch) => {
