@@ -144,7 +144,7 @@ impl<T> PitchDetector<T> for McLeodDetector<T>
 
         normalized_square_difference(signal, signal_complex, scratch0, scratch1, nsdf);
 
-        pitch_from_peaks(nsdf, sample_rate, clarity_threshold, PeakCorrection::None)
+        pitch_from_peaks(nsdf, sample_rate, clarity_threshold, PeakCorrection::Quadratic)
     }
 }
 
