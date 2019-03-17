@@ -1,8 +1,15 @@
 [package]
 name = "pitch-detection"
+description = "A collection of algorithms to determine the pitch of a sound sample."
 version = "0.1.0"
 authors = ["Alessandro Genova <ales.genova@gmail.com>"]
 edition = "2018"
+license = "MIT/Apache-2.0"
+homepage = "https://github.com/alesgenova/pitch-detection"
+repository = "https://github.com/alesgenova/pitch-detection"
+keywords = ["pitch", "frequency", "detection", "sound"]
+categories = ["algorithms", "multimedia::audio", "no-std"]
+readme = "README.md"
 
 [dependencies]
 rustfft = { version = "3.0.0", default-features = false }
