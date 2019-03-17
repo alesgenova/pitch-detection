@@ -19,4 +19,4 @@ println!("Frequency: {}, Clarity: {}", pitch.frequency, pitch.clarity);
 ```
 ## Live Demo
 [![Demo Page](https://raw.githubusercontent.com/alesgenova/pitch-detection-app/master/demo.png)](https://alesgenova.github.io/pitch-detection-app/)
-[Source](https://github.com/alesgenova/pitch-detection-www)
+[Source](https://github.com/alesgenova/pitch-detection-app)
