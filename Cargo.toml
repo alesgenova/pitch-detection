@@ -1,7 +1,7 @@
 [package]
 name = "pitch-detection"
 description = "A collection of algorithms to determine the pitch of a sound sample."
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Alessandro Genova <ales.genova@gmail.com>"]
 edition = "2018"
 license = "MIT/Apache-2.0"
@@ -12,6 +12,6 @@ categories = ["algorithms", "multimedia::audio", "no-std"]
 readme = "README.md"
 
 [dependencies]
-rustfft = { version = "3.0.0", default-features = false }
+rustfft = { version = "4.0.0", default-features = false }
 num-traits = { version = "0.2", default-features = false }
-num-complex = { version = "0.2", default-features = false }
+num-complex = { version = "0.3", default-features = false }
