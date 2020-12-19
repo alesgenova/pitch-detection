@@ -75,11 +75,9 @@ pub fn correct_peak<T: Float>(peak: (usize, T), data: &[T], correction: PeakCorr
                     y: data[idx + 1],
                 },
             );
-            return (point.x, point.y);
+            (point.x, point.y)
         }
-        PeakCorrection::None => {
-            return (T::from_usize(peak.0).unwrap(), peak.1);
-        }
+        PeakCorrection::None => (T::from_usize(peak.0).unwrap(), peak.1),
     }
 }
 
