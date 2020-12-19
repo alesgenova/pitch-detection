@@ -1,3 +1,6 @@
+[![workflow status](https://github.com/alesgenova/pitch-detection/workflows/main/badge.svg?branch=master)](https://github.com/alesgenova/pitch-detection/actions?query=workflow%3Amain+branch%3Amaster)
+[![crates.io](https://img.shields.io/crates/v/pitch-detection.svg)](https://crates.io/crates/pitch-detection)
+
 # pitch_detection
 
 ## Usage
