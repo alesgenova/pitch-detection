@@ -1,4 +1,5 @@
 use num_complex::Complex;
+use num_traits::Zero;
 use rustfft::FFTplanner;
 
 use crate::float::Float;
@@ -12,6 +13,7 @@ use crate::utils::peak::correct_peak;
 use crate::utils::peak::detect_peaks;
 use crate::utils::peak::PeakCorrection;
 
+#[derive(Clone)]
 pub struct Pitch<T>
 where
     T: Float,
@@ -44,12 +46,12 @@ where
         let mut complex_buffers: Vec<Vec<Complex<T>>> = Vec::new();
 
         for _i in 0..n_real_buffers {
-            let v = new_real_buffer(size + padding);
+            let v = new_real_buffer(size + padding, T::zero());
             real_buffers.push(v);
         }
 
         for _i in 0..n_complex_buffers {
-            let v = new_complex_buffer(size + padding);
+            let v = new_complex_buffer(size + padding, Complex::zero());
             complex_buffers.push(v);
         }
 

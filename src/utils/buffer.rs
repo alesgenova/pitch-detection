@@ -8,12 +8,12 @@ pub enum ComplexComponent {
     Im,
 }
 
-pub fn new_real_buffer<T: Float>(size: usize) -> Vec<T> {
-    vec![T::zero(); size]
+pub fn new_real_buffer<T: Float>(size: usize, fill: T) -> Vec<T> {
+    vec![fill; size]
 }
 
-pub fn new_complex_buffer<T: Float>(size: usize) -> Vec<Complex<T>> {
-    vec![Complex::zero(); size]
+pub fn new_complex_buffer<T: Float>(size: usize, fill: Complex<T>) -> Vec<Complex<T>> {
+    vec![fill; size]
 }
 
 pub fn copy_real_to_complex<T: Float>(
