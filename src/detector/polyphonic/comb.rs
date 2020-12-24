@@ -75,7 +75,16 @@ where
                         ComplexComponent::Re,
                     );
                     fft.process(&mut signal_complex, &mut scratch);
-                    comb_filter(p.frequency, beta, size, sample_rate, &mut comb_g);
+                    comb_filter(
+                        p.frequency,
+                        beta,
+                        size,
+                        sample_rate,
+                        &mut comb_g,
+                        true,
+                        true,
+                        true,
+                    );
 
                     scratch
                         .iter_mut()

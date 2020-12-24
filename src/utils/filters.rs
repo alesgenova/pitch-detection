@@ -1,27 +1,49 @@
 use crate::float::Float;
 
-pub fn comb_filter<T>(freq: T, beta: T, size: usize, sample_rate: usize, result: &mut [T])
-where
+pub fn comb_filter<T>(
+    freq: T,
+    beta: T,
+    size: usize,
+    sample_rate: usize,
+    result: &mut [T],
+    lower_octaves: bool,
+    higher_octaves: bool,
+    initialize: bool,
+) where
     T: Float,
 {
     assert_eq!(size, result.len());
 
-    let dh = T::from_usize(size).unwrap() / T::from_usize(sample_rate).unwrap();
-
-    let max_freq = T::from_usize(size / 2).unwrap() / dh;
     let one = T::one();
     let two = one + one;
 
-    let mut nodes = vec![];
+    let dh = T::from_usize(size).unwrap() / T::from_usize(sample_rate).unwrap();
 
-    let mut f = freq;
-    while f < max_freq {
-        nodes.push(f);
-        f = f * two;
+    let mut nodes = vec![];
+    nodes.push(freq);
+
+    if lower_octaves {
+        let min_freq = one / dh;
+        let mut f = freq / two;
+        while f > min_freq {
+            nodes.push(f);
+            f = f / two;
+        }
     }
 
-    for val in result.iter_mut() {
-        *val = one;
+    if higher_octaves {
+        let max_freq = T::from_usize(size / 2).unwrap() / dh;
+        let mut f = freq * two;
+        while f < max_freq {
+            nodes.push(f);
+            f = f * two;
+        }
+    }
+
+    if initialize {
+        result.iter_mut().for_each(|val| {
+            *val = one;
+        });
     }
 
     for idx in 0..(size / 2) {
