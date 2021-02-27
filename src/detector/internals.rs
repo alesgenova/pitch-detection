@@ -107,7 +107,7 @@ pub fn get_power_level<T>(signal: &[T]) -> T
 where
     T: Float + std::iter::Sum,
 {
-    signal.iter().map(|s| *s * *s).sum::<T>()
+    signal.iter().map(|&s| s * s).sum::<T>()
 }
 
 fn m_of_tau<T>(signal: &[T], signal_square_sum: Option<T>, result: &mut [T])
@@ -117,16 +117,18 @@ where
     assert!(result.len() >= signal.len());
 
     let signal_square_sum =
-        signal_square_sum.unwrap_or_else(|| signal.iter().map(|s| *s * *s).sum::<T>());
+        signal_square_sum.unwrap_or_else(|| signal.iter().map(|&s| s * s).sum::<T>());
 
-    result[0] = T::from_usize(2).unwrap() * signal_square_sum;
-    let last = result[1..].iter_mut().zip(signal).fold(
-        T::from_usize(2).unwrap() * signal_square_sum,
-        |old, (r, s)| {
-            *r = old - *s * *s;
+    let start = T::from_usize(2).unwrap() * signal_square_sum;
+    result[0] = start;
+    let last = result[1..]
+        .iter_mut()
+        .zip(signal)
+        .fold(start, |old, (r, &s)| {
+            *r = old - s * s;
             *r
-        },
-    );
+        });
+    // Pad the end of `result` with the last value
     result[signal.len()..].iter_mut().for_each(|r| *r = last);
 }
 
