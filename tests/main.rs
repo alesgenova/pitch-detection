@@ -29,7 +29,7 @@ fn mcleod_square_signal() {
 }
 
 #[test]
-fn autocorrelation_triange_signal() {
+fn autocorrelation_triangle_signal() {
     pure_frequency(
         String::from("Autocorrelation"),
         String::from("triangle"),
