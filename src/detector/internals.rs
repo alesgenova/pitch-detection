@@ -40,18 +40,13 @@ where
         size: usize,
         padding: usize,
     ) -> Self {
-        let mut real_buffers: Vec<Vec<T>> = Vec::new();
-        let mut complex_buffers: Vec<Vec<Complex<T>>> = Vec::new();
+        let real_buffers: Vec<Vec<T>> = (0..n_real_buffers)
+            .map(|_| new_real_buffer(size + padding))
+            .collect();
 
-        for _i in 0..n_real_buffers {
-            let v = new_real_buffer(size + padding);
-            real_buffers.push(v);
-        }
-
-        for _i in 0..n_complex_buffers {
-            let v = new_complex_buffer(size + padding);
-            complex_buffers.push(v);
-        }
+        let complex_buffers: Vec<Vec<Complex<T>>> = (0..n_complex_buffers)
+            .map(|_| new_complex_buffer(size + padding))
+            .collect();
 
         DetectorInternals {
             size,
@@ -93,13 +88,14 @@ pub fn pitch_from_peaks<T>(
 where
     T: Float,
 {
+    let sample_rate = T::from_usize(sample_rate).unwrap();
     let peaks = detect_peaks(input);
+
     choose_peak(peaks, clarity_threshold)
         .map(|peak| correct_peak(peak, input, correction))
-        .map(|peak| {
-            let frequency = T::from_usize(sample_rate).unwrap() / peak.0;
-            let clarity = peak.1 / input[0];
-            Pitch { frequency, clarity }
+        .map(|peak| Pitch {
+            frequency: sample_rate / peak.0,
+            clarity: peak.1 / input[0],
         })
 }
 

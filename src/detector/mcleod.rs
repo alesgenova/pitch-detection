@@ -36,24 +36,32 @@ where
         clarity_threshold: T,
     ) -> Option<Pitch<T>> {
         assert_eq!(signal.len(), self.internals.size);
+        // We need at least two real and two complex buffers for scratch.
+        let real_buffers = &mut self.internals.real_buffers;
+        let complex_buffers = &mut self.internals.complex_buffers;
+        assert!(real_buffers.len() >= 2);
+        assert!(complex_buffers.len() >= 2);
 
         if get_power_level(signal) < power_threshold {
             return None;
         }
 
-        let (signal_complex, rest) = self.internals.complex_buffers.split_first_mut().unwrap();
-        let (scratch0, _) = rest.split_first_mut().unwrap();
+        let (signal_complex, scratch0) = split_first_two_mut(complex_buffers);
+        let (scratch1, peaks) = split_first_two_mut(real_buffers);
 
-        let (scratch1, rest) = self.internals.real_buffers.split_first_mut().unwrap();
-        let (nsdf, _) = rest.split_first_mut().unwrap();
-
-        normalized_square_difference(signal, signal_complex, scratch0, scratch1, nsdf);
+        normalized_square_difference(signal, signal_complex, scratch0, scratch1, peaks);
 
         pitch_from_peaks(
-            nsdf,
+            peaks,
             sample_rate,
             clarity_threshold,
             PeakCorrection::Quadratic,
         )
     }
+}
+
+/// Split the first two elements from `array` off as mutable elements in a tuple.
+fn split_first_two_mut<T>(mut array: &mut Vec<T>) -> (&mut T, &mut T) {
+    let mut iter = array.iter_mut();
+    (iter.next().unwrap(), iter.next().unwrap())
 }
