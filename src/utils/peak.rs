@@ -121,7 +121,7 @@ mod tests {
         assert_eq!(x, 0.75);
         assert_eq!(y, -1.375);
 
-        // Test off concave-up parabolas
+        // Test of concave-up parabolas
         fn quad3(x: f64) -> f64 {
             x * x + 2.0
         }
