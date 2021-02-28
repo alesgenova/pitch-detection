@@ -61,7 +61,7 @@ where
 }
 
 /// Split the first two elements from `array` off as mutable elements in a tuple.
-fn split_first_two_mut<T>(mut array: &mut Vec<T>) -> (&mut T, &mut T) {
+fn split_first_two_mut<T>(array: &mut Vec<T>) -> (&mut T, &mut T) {
     let mut iter = array.iter_mut();
     (iter.next().unwrap(), iter.next().unwrap())
 }
