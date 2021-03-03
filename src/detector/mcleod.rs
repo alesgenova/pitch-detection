@@ -36,21 +36,24 @@ where
         clarity_threshold: T,
     ) -> Option<Pitch<T>> {
         assert_eq!(signal.len(), self.internals.size);
-        // We need at least two real and two complex buffers for scratch.
-        let real_buffers = &mut self.internals.real_buffers;
-        let complex_buffers = &mut self.internals.complex_buffers;
-        assert!(real_buffers.len() >= 2);
-        assert!(complex_buffers.len() >= 2);
+        assert!(
+            self.internals.has_sufficient_buffers(2, 2),
+            "McLeodDetector requires at least 2 real and 2 complex buffers"
+        );
 
         if get_power_level(signal) < power_threshold {
             return None;
         }
 
-        let (signal_complex, scratch0) = split_first_two_mut(complex_buffers);
-        let (scratch1, peaks) = split_first_two_mut(real_buffers);
+        let mut iter = self.internals.complex_buffers.iter_mut();
+        let signal_complex = iter.next().unwrap();
+        let scratch0 = iter.next().unwrap();
+
+        let mut iter = self.internals.real_buffers.iter_mut();
+        let scratch1 = iter.next().unwrap();
+        let peaks = iter.next().unwrap();
 
         normalized_square_difference(signal, signal_complex, scratch0, scratch1, peaks);
-
         pitch_from_peaks(
             peaks,
             sample_rate,
@@ -58,10 +61,4 @@ where
             PeakCorrection::Quadratic,
         )
     }
-}
-
-/// Split the first two elements from `array` off as mutable elements in a tuple.
-fn split_first_two_mut<T>(array: &mut Vec<T>) -> (&mut T, &mut T) {
-    let mut iter = array.iter_mut();
-    (iter.next().unwrap(), iter.next().unwrap())
 }

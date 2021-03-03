@@ -55,6 +55,11 @@ where
             complex_buffers,
         }
     }
+
+    // Check whether there are at least the appropriate number of real and complex buffers.
+    pub fn has_sufficient_buffers(&self, n_real_buffers: usize, n_complex_buffers: usize) -> bool {
+        self.real_buffers.len() >= n_real_buffers && self.complex_buffers.len() >= n_complex_buffers
+    }
 }
 
 pub fn autocorrelation<T>(
