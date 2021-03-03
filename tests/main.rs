@@ -95,6 +95,38 @@ fn mcleod_violin_g4() {
     raw_frequency("McLeod".into(), signal, 392.);
 }
 
+#[test]
+fn mcleod_tenor_trombone_c3() {
+    let signal: Signal<f64> =
+        wav_file_to_signal(samples_path("tenor-trombone-C3.wav"), 0, 10 * 1024);
+
+    raw_frequency("McLeod".into(), signal, 130.);
+}
+
+#[test]
+fn mcleod_tenor_trombone_db3() {
+    let signal: Signal<f64> =
+        wav_file_to_signal(samples_path("tenor-trombone-Db3.wav"), 0, 10 * 1024);
+
+    raw_frequency("McLeod".into(), signal, 138.);
+}
+
+#[test]
+fn mcleod_tenor_trombone_ab3() {
+    let signal: Signal<f64> =
+        wav_file_to_signal(samples_path("tenor-trombone-Ab3.wav"), 0, 10 * 1024);
+
+    raw_frequency("McLeod".into(), signal, 207.);
+}
+
+#[test]
+fn mcleod_tenor_trombone_b3() {
+    let signal: Signal<f64> =
+        wav_file_to_signal(samples_path("tenor-trombone-B3.wav"), 0, 10 * 1024);
+
+    raw_frequency("McLeod".into(), signal, 246.);
+}
+
 fn get_chunk<T: Float>(signal: &[T], start: usize, window: usize, output: &mut [T]) {
     let start = match signal.len() > start {
         true => start,
