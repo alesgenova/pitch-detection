@@ -1,10 +1,10 @@
-use crate::detector::internals::get_power_level;
 use crate::detector::internals::normalized_square_difference;
 use crate::detector::internals::pitch_from_peaks;
 use crate::detector::internals::DetectorInternals;
 use crate::detector::internals::Pitch;
 use crate::detector::PitchDetector;
 use crate::float::Float;
+use crate::utils::buffer::square_sum;
 use crate::utils::peak::PeakCorrection;
 
 pub struct McLeodDetector<T>
@@ -41,7 +41,7 @@ where
             "McLeodDetector requires at least 2 real and 2 complex buffers"
         );
 
-        if get_power_level(signal) < power_threshold {
+        if square_sum(signal) < power_threshold {
             return None;
         }
 

@@ -1,11 +1,10 @@
-use crate::detector::internals::autocorrelation;
-use crate::detector::internals::get_power_level;
 use crate::detector::internals::pitch_from_peaks;
 use crate::detector::internals::DetectorInternals;
 use crate::detector::internals::Pitch;
 use crate::detector::PitchDetector;
 use crate::float::Float;
 use crate::utils::peak::PeakCorrection;
+use crate::{detector::internals::autocorrelation, utils::buffer::square_sum};
 
 pub struct AutocorrelationDetector<T>
 where
@@ -41,7 +40,7 @@ where
             "McLeodDetector requires at least 1 real and 2 complex buffers"
         );
 
-        if get_power_level(signal) < power_threshold {
+        if square_sum(signal) < power_threshold {
             return None;
         }
 

@@ -1,16 +1,16 @@
 use num_complex::Complex;
 use rustfft::FFTplanner;
 
-use crate::float::Float;
-use crate::utils::buffer::copy_complex_to_real;
 use crate::utils::buffer::copy_real_to_complex;
 use crate::utils::buffer::new_complex_buffer;
 use crate::utils::buffer::new_real_buffer;
 use crate::utils::buffer::ComplexComponent;
+use crate::utils::buffer::{copy_complex_to_real, square_sum};
 use crate::utils::peak::choose_peak;
 use crate::utils::peak::correct_peak;
 use crate::utils::peak::detect_peaks;
 use crate::utils::peak::PeakCorrection;
+use crate::{float::Float, utils::buffer::modulus_squared};
 
 pub struct Pitch<T>
 where
@@ -20,6 +20,9 @@ where
     pub clarity: T,
 }
 
+/// Data structure to hold any buffers needed for pitch computation.
+/// For WASM it's best to allocate buffers once rather than allocate and
+/// free buffers repeatedly.
 pub struct DetectorInternals<T>
 where
     T: Float,
@@ -62,6 +65,8 @@ where
     }
 }
 
+/// Compute the autocorrelation of `signal` to `result`. All buffers but `signal`
+/// may be used as scratch.
 pub fn autocorrelation<T>(
     signal: &[T],
     signal_complex: &mut [Complex<T>],
@@ -70,16 +75,15 @@ pub fn autocorrelation<T>(
 ) where
     T: Float,
 {
-    copy_real_to_complex(signal, signal_complex, ComplexComponent::Re);
     let mut planner = FFTplanner::new(false);
     let fft = planner.plan_fft(signal_complex.len());
-    fft.process(signal_complex, scratch);
-    scratch.iter_mut().for_each(|s| {
-        s.re = s.re * s.re + s.im * s.im;
-        s.im = T::zero();
-    });
     let mut planner = FFTplanner::new(true);
     let inv_fft = planner.plan_fft(signal_complex.len());
+
+    // Compute the autocorrelation
+    copy_real_to_complex(signal, signal_complex, ComplexComponent::Re);
+    fft.process(signal_complex, scratch);
+    modulus_squared(scratch);
     inv_fft.process(scratch, signal_complex);
     copy_complex_to_real(signal_complex, result, ComplexComponent::Re);
 }
@@ -104,21 +108,13 @@ where
         })
 }
 
-pub fn get_power_level<T>(signal: &[T]) -> T
-where
-    T: Float + std::iter::Sum,
-{
-    signal.iter().map(|&s| s * s).sum::<T>()
-}
-
 fn m_of_tau<T>(signal: &[T], signal_square_sum: Option<T>, result: &mut [T])
 where
     T: Float + std::iter::Sum,
 {
     assert!(result.len() >= signal.len());
 
-    let signal_square_sum =
-        signal_square_sum.unwrap_or_else(|| signal.iter().map(|&s| s * s).sum::<T>());
+    let signal_square_sum = signal_square_sum.unwrap_or_else(|| square_sum(signal));
 
     let start = T::from_usize(2).unwrap() * signal_square_sum;
     result[0] = start;
@@ -142,10 +138,12 @@ pub fn normalized_square_difference<T>(
 ) where
     T: Float + std::iter::Sum,
 {
+    let two = T::from_usize(2).unwrap();
+
     autocorrelation(signal, scratch0, scratch1, result);
     m_of_tau(signal, Some(result[0]), scratch2);
     result
         .iter_mut()
         .zip(scratch2)
-        .for_each(|(r, s)| *r = T::from_usize(2).unwrap() * *r / *s)
+        .for_each(|(r, s)| *r = two * *r / *s)
 }
