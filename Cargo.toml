@@ -13,8 +13,6 @@ readme = "README.md"
 
 [dependencies]
 rustfft = { version = "5.0.1", default-features = false }
-num-traits = { version = "0.2", default-features = false }
-num-complex = { version = "0.3", default-features = false }
 
 [dev-dependencies]
 criterion = "0.3"

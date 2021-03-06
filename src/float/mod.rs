@@ -1,4 +1,4 @@
-use num_traits::float::FloatCore as NumFloatCore;
+use rustfft::num_traits::float::FloatCore as NumFloatCore;
 use rustfft::FftNum;
 use std::fmt::{Debug, Display};
 

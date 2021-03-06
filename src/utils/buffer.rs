@@ -1,5 +1,5 @@
-use num_complex::Complex;
-use num_traits::Zero;
+use rustfft::num_complex::Complex;
+use rustfft::num_traits::Zero;
 
 use crate::float::Float;
 

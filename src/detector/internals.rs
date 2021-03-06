@@ -1,4 +1,4 @@
-use num_complex::Complex;
+use rustfft::num_complex::Complex;
 use rustfft::FftPlanner;
 
 use crate::utils::buffer::copy_real_to_complex;
