@@ -12,7 +12,7 @@ categories = ["algorithms", "multimedia::audio", "no-std"]
 readme = "README.md"
 
 [dependencies]
-rustfft = { version = "4.0.0", default-features = false }
+rustfft = { version = "5.0.1", default-features = false }
 num-traits = { version = "0.2", default-features = false }
 num-complex = { version = "0.3", default-features = false }
 

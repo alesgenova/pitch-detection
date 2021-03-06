@@ -1,5 +1,5 @@
 use num_complex::Complex;
-use rustfft::FFTplanner;
+use rustfft::FftPlanner;
 
 use crate::utils::buffer::copy_real_to_complex;
 use crate::utils::buffer::new_complex_buffer;
@@ -75,16 +75,15 @@ pub fn autocorrelation<T>(
 ) where
     T: Float,
 {
-    let mut planner = FFTplanner::new(false);
-    let fft = planner.plan_fft(signal_complex.len());
-    let mut planner = FFTplanner::new(true);
-    let inv_fft = planner.plan_fft(signal_complex.len());
+    let mut planner = FftPlanner::new();
+    let fft = planner.plan_fft_forward(signal_complex.len());
+    let inv_fft = planner.plan_fft_inverse(signal_complex.len());
 
     // Compute the autocorrelation
     copy_real_to_complex(signal, signal_complex, ComplexComponent::Re);
-    fft.process(signal_complex, scratch);
-    modulus_squared(scratch);
-    inv_fft.process(scratch, signal_complex);
+    fft.process_with_scratch(signal_complex, scratch);
+    modulus_squared(signal_complex);
+    inv_fft.process_with_scratch(signal_complex, scratch);
     copy_complex_to_real(signal_complex, result, ComplexComponent::Re);
 }
 
