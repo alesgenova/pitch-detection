@@ -5,44 +5,87 @@ pub enum PeakCorrection {
     None,
 }
 
-fn detect_crossings<'a, T: Float>(arr: &'a [T]) -> impl Iterator<Item = (usize, usize)> + 'a {
-    arr.windows(2)
-        .enumerate()
-        .scan(
-            None,
-            |positive_zero_cross: &mut Option<usize>, (i, win)| match positive_zero_cross.take() {
-                Some(idx) => {
-                    if win[1] < T::zero() && win[0] > T::zero() {
-                        *positive_zero_cross = None;
-                        Some(Some((idx, i + 1)))
-                    } else {
-                        *positive_zero_cross = Some(idx);
-                        Some(None)
-                    }
-                }
-                None => {
-                    if win[1] > T::zero() && win[0] < T::zero() {
-                        *positive_zero_cross = Some(i + 1);
-                    }
-                    Some(None)
-                }
-            },
-        )
-        .filter_map(|o| o)
+/// An iterator that returns the positive peaks of `self.data`,
+/// skipping over any initial positive values (i.e., every peak
+/// is preceded by negative values).
+struct PeaksIter<'a, T> {
+    index: usize,
+    data: &'a [T],
 }
 
-pub fn detect_peaks<'a, T: Float>(arr: &'a [T]) -> impl Iterator<Item = (usize, T)> + 'a {
-    detect_crossings(arr).map(move |(start, stop)| {
-        let mut peak_idx = 0;
-        let mut peak_val = -T::infinity();
-        for i in start..stop {
-            if arr[i] > peak_val {
-                peak_val = arr[i];
-                peak_idx = i;
-            }
+impl<'a, T: Float> PeaksIter<'a, T> {
+    fn new(arr: &'a [T]) -> Self {
+        Self {
+            data: arr,
+            index: 0,
         }
-        (peak_idx, peak_val)
-    })
+    }
+}
+
+impl<'a, T: Float> Iterator for PeaksIter<'a, T> {
+    type Item = (usize, T);
+
+    fn next(&mut self) -> Option<(usize, T)> {
+        let mut idx = self.index;
+        let mut max = -T::infinity();
+        let mut max_index = idx;
+
+        if idx >= self.data.len() {
+            return None;
+        }
+
+        if idx == 0 {
+            // If we're first starting iteration, we want to skip over
+            // any positive values at the start of `self.data`. These are not
+            // relevant for auto-correlation algorithms (since self.data[0] will always
+            // be a global maximum for an autocorrelation).
+            idx += self
+                .data
+                .iter()
+                // `!val.is_sign_negative()` is used instead of `val.is_sign_positive()`
+                // to make sure that any spurious NaN at the start are also skipped (NaN
+                // is not sign positive and is not sign negative).
+                .take_while(|val| !val.is_sign_negative())
+                .count();
+        }
+
+        // Skip over the negative parts because we're looking for a positive peak!
+        idx += self.data[idx..]
+            .iter()
+            .take_while(|val| val.is_sign_negative())
+            .count();
+
+        // Record the local max and max_index for the next stretch of positive values.
+        for val in &self.data[idx..] {
+            if val.is_sign_negative() {
+                break;
+            }
+            if *val > max {
+                max = *val;
+                max_index = idx;
+            }
+            idx += 1;
+        }
+
+        self.index = idx;
+
+        // We may not have found a maximum; the only time when this happens is when we've
+        // reached the end of `self.data`. Alternatively, if `self.data` ends in a positive
+        // segment we don't want to count `max` as a real maximum (since the data
+        // was probably truncated in some way). In this case, we have `idx == self.data.len()`,
+        // and so we terminate the iterator.
+        if max == -T::infinity() || idx == self.data.len() {
+            return None;
+        }
+
+        Some((max_index, max))
+    }
+}
+
+// Find `(index, value)` of positive peaks in `arr`. Every positive peak is preceded and succeeded
+// by negative values, so any initial positive segment of `arr` does not produce a peak.
+pub fn detect_peaks<'a, T: Float>(arr: &'a [T]) -> impl Iterator<Item = (usize, T)> + 'a {
+    PeaksIter::new(arr)
 }
 
 pub fn choose_peak<I: Iterator<Item = (usize, T)>, T: Float>(
@@ -132,5 +175,20 @@ mod tests {
         let (x, y) = find_quadratic_peak(quad3(-2.), quad3(-1.), quad3(0.));
         assert_eq!(x - 1., -2.);
         assert_eq!(y, 6.);
+    }
+
+    #[test]
+    fn detect_peaks_test() {
+        let v = vec![-2., -1., 1., 2., 1., -1., 4., -3., -2., 1., 1., -1.];
+        let peaks: Vec<(usize, f64)> = detect_peaks(v.as_slice()).collect();
+        assert_eq!(peaks, [(3, 2.), (6, 4.), (9, 1.)]);
+
+        let v = vec![1., 2., 1., -1., 2., -3., -2., 1., 1., -1.];
+        let peaks: Vec<(usize, f64)> = detect_peaks(v.as_slice()).collect();
+        assert_eq!(peaks, [(4, 2.), (7, 1.)]);
+
+        let v = vec![1., 2., 1., -1., 2., -3., -2., 1., 1.];
+        let peaks: Vec<(usize, f64)> = detect_peaks(v.as_slice()).collect();
+        assert_eq!(peaks, [(4, 2.)]);
     }
 }
