@@ -73,5 +73,8 @@ where
 
         // STEP 5: Find the peak and use quadratic interpolation to fine-tune the result
         pitch_from_peaks(result, sample_rate, T::zero(), PeakCorrection::Quadratic)
+
+        // STEP 6: TODO. Step 6 of the YIN paper can eek out a little more accuracy/consistency, but
+        // it also involves computing over a much larger window.
     }
 }
