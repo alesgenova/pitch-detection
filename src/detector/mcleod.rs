@@ -1,10 +1,10 @@
-use crate::detector::internals::get_power_level;
 use crate::detector::internals::normalized_square_difference;
 use crate::detector::internals::pitch_from_peaks;
 use crate::detector::internals::DetectorInternals;
 use crate::detector::internals::Pitch;
 use crate::detector::PitchDetector;
 use crate::float::Float;
+use crate::utils::buffer::square_sum;
 use crate::utils::peak::PeakCorrection;
 
 pub struct McLeodDetector<T>
@@ -36,21 +36,26 @@ where
         clarity_threshold: T,
     ) -> Option<Pitch<T>> {
         assert_eq!(signal.len(), self.internals.size);
+        assert!(
+            self.internals.has_sufficient_buffers(2, 2),
+            "McLeodDetector requires at least 2 real and 2 complex buffers"
+        );
 
-        if get_power_level(signal) < power_threshold {
+        if square_sum(signal) < power_threshold {
             return None;
         }
 
-        let (signal_complex, rest) = self.internals.complex_buffers.split_first_mut().unwrap();
-        let (scratch0, _) = rest.split_first_mut().unwrap();
+        let mut iter = self.internals.complex_buffers.iter_mut();
+        let signal_complex = iter.next().unwrap();
+        let scratch0 = iter.next().unwrap();
 
-        let (scratch1, rest) = self.internals.real_buffers.split_first_mut().unwrap();
-        let (nsdf, _) = rest.split_first_mut().unwrap();
+        let mut iter = self.internals.real_buffers.iter_mut();
+        let scratch1 = iter.next().unwrap();
+        let peaks = iter.next().unwrap();
 
-        normalized_square_difference(signal, signal_complex, scratch0, scratch1, nsdf);
-
+        normalized_square_difference(signal, signal_complex, scratch0, scratch1, peaks);
         pitch_from_peaks(
-            nsdf,
+            peaks,
             sample_rate,
             clarity_threshold,
             PeakCorrection::Quadratic,
