@@ -1,11 +1,10 @@
-use crate::detector::internals::autocorrelation;
-use crate::detector::internals::get_power_level;
 use crate::detector::internals::pitch_from_peaks;
 use crate::detector::internals::DetectorInternals;
 use crate::detector::internals::Pitch;
 use crate::detector::PitchDetector;
 use crate::float::Float;
 use crate::utils::peak::PeakCorrection;
+use crate::{detector::internals::autocorrelation, utils::buffer::square_sum};
 
 pub struct AutocorrelationDetector<T>
 where
@@ -36,14 +35,21 @@ where
         clarity_threshold: T,
     ) -> Option<Pitch<T>> {
         assert_eq!(signal.len(), self.internals.size);
+        assert!(
+            self.internals.has_sufficient_buffers(1, 2),
+            "McLeodDetector requires at least 1 real and 2 complex buffers"
+        );
 
-        if get_power_level(signal) < power_threshold {
+        if square_sum(signal) < power_threshold {
             return None;
         }
 
-        let (signal_complex, rest) = self.internals.complex_buffers.split_first_mut().unwrap();
-        let (scratch, _) = rest.split_first_mut().unwrap();
-        let (autocorr, _) = self.internals.real_buffers.split_first_mut().unwrap();
+        let mut iter = self.internals.complex_buffers.iter_mut();
+        let signal_complex = iter.next().unwrap();
+        let scratch = iter.next().unwrap();
+
+        let mut iter = self.internals.real_buffers.iter_mut();
+        let autocorr = iter.next().unwrap();
 
         autocorrelation(signal, signal_complex, scratch, autocorr);
         let clarity_threshold = clarity_threshold * autocorr[0];

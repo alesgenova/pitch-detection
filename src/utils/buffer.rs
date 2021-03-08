@@ -1,5 +1,5 @@
-use num_complex::Complex;
-use num_traits::Zero;
+use rustfft::num_complex::Complex;
+use rustfft::num_traits::Zero;
 
 use crate::float::Float;
 
@@ -59,4 +59,21 @@ pub fn copy_complex_to_real<T: Float>(
     output[input.len()..]
         .iter_mut()
         .for_each(|o| *o = T::zero());
+}
+
+/// Computes |x|^2 for each complex value x in `arr`. This function
+/// modifies `arr` in place and leaves the complex component zero.
+pub fn modulus_squared<'a, T: Float>(arr: &'a mut [Complex<T>]) {
+    for mut s in arr {
+        s.re = s.re * s.re + s.im * s.im;
+        s.im = T::zero();
+    }
+}
+
+/// Compute the sum of the square of each element of `arr`.
+pub fn square_sum<T>(arr: &[T]) -> T
+where
+    T: Float + std::iter::Sum,
+{
+    arr.iter().map(|&s| s * s).sum::<T>()
 }
