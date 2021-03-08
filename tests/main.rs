@@ -1,6 +1,6 @@
-use pitch_detection::detector::autocorrelation::AutocorrelationDetector;
 use pitch_detection::detector::mcleod::McLeodDetector;
 use pitch_detection::detector::PitchDetector;
+use pitch_detection::detector::{autocorrelation::AutocorrelationDetector, yin::YINDetector};
 use pitch_detection::float::Float;
 use pitch_detection::utils::buffer::new_real_buffer;
 
@@ -12,6 +12,11 @@ fn autocorrelation_sin_signal() {
 #[test]
 fn mcleod_sin_signal() {
     pure_frequency(String::from("McLeod"), String::from("sin"), 440.0);
+}
+
+#[test]
+fn yin_sin_signal() {
+    pure_frequency(String::from("YIN"), String::from("sin"), 440.0);
 }
 
 #[test]
@@ -29,6 +34,11 @@ fn mcleod_square_signal() {
 }
 
 #[test]
+fn yin_square_signal() {
+    pure_frequency(String::from("YIN"), String::from("square"), 440.0);
+}
+
+#[test]
 fn autocorrelation_triangle_signal() {
     pure_frequency(
         String::from("Autocorrelation"),
@@ -40,6 +50,11 @@ fn autocorrelation_triangle_signal() {
 #[test]
 fn mcleod_triangle_signal() {
     pure_frequency(String::from("McLeod"), String::from("triangle"), 440.0);
+}
+
+#[test]
+fn yin_triangle_signal() {
+    pure_frequency(String::from("YIN"), String::from("triangle"), 440.0);
 }
 
 fn get_chunk<T: Float>(signal: &[T], start: usize, window: usize, output: &mut [T]) {
@@ -133,6 +148,9 @@ fn detector_factory(name: String, window: usize, padding: usize) -> Box<dyn Pitc
         }
         "Autocorrelation" => {
             return Box::new(AutocorrelationDetector::<f64>::new(window, padding));
+        }
+        "YIN" => {
+            return Box::new(YINDetector::<f64>::new(window, padding));
         }
         _ => {
             panic!("Unknown detector {}", name);

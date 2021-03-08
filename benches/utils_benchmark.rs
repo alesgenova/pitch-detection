@@ -2,7 +2,10 @@ use std::f64::consts::PI;
 
 use criterion::{black_box, criterion_group, criterion_main, Criterion};
 use pitch_detection::{
-    detector::{autocorrelation::AutocorrelationDetector, mcleod::McLeodDetector, PitchDetector},
+    detector::{
+        autocorrelation::AutocorrelationDetector, mcleod::McLeodDetector, yin::YINDetector,
+        PitchDetector,
+    },
     utils::peak::detect_peaks,
 };
 
@@ -34,6 +37,7 @@ pub fn pitch_detect_benchmark(c: &mut Criterion) {
 
     let mut mcleod_detector = McLeodDetector::new(SIZE, PADDING);
     let mut autocorrelation_detector = AutocorrelationDetector::new(SIZE, PADDING);
+    let mut yin_detector = YINDetector::new(SIZE, PADDING);
 
     c.bench_function("McLeod get_pitch", |b| {
         b.iter(|| {
@@ -51,6 +55,18 @@ pub fn pitch_detect_benchmark(c: &mut Criterion) {
     c.bench_function("Autocorrelation get_pitch", |b| {
         b.iter(|| {
             autocorrelation_detector
+                .get_pitch(
+                    black_box(&signal),
+                    SAMPLE_RATE,
+                    POWER_THRESHOLD,
+                    CLARITY_THRESHOLD,
+                )
+                .unwrap()
+        });
+    });
+    c.bench_function("YIN get_pitch", |b| {
+        b.iter(|| {
+            yin_detector
                 .get_pitch(
                     black_box(&signal),
                     SAMPLE_RATE,
