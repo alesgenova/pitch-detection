@@ -148,10 +148,10 @@ pub fn normalized_square_difference<T>(
 }
 
 /// Compute the windowed autocorrelation of `signal` and put the result in `result`.
-/// For a signal `x=(x_0,x_1,...)`, the windowed autocorrelation with window size `w` is
+/// For a signal _x=(x_0,x_1,...)_, the windowed autocorrelation with window size _w_ is
 /// the function
 ///
-///    `r(t) = sum_{i=0}^{w-1} x_i*x_{i+t}`.
+/// > r(t) = sum_{i=0}^{w-1} x_i*x_{i+t}
 ///
 /// This function assumes `window_size` is at most half of the length of `signal`.
 pub fn windowed_autocorrelation<T>(
@@ -202,10 +202,10 @@ pub fn windowed_autocorrelation<T>(
     copy_complex_to_real(&signal_complex[..window_size], result, ComplexComponent::Re);
 }
 
-/// Compute the windowed square error, `d(t)`, of `signal`. For a window size of `w` and a signal
-/// `x=(x_0,x_1,...)`, this is defined by
+/// Compute the windowed square error, _d(t)_, of `signal`. For a window size of _w_ and a signal
+/// _x=(x_0,x_1,...)_, this is defined by
 ///
-///     `d(t) = sum_{i=0}^{w-1} (x_i - x_{i+t})^2`
+///  > d(t) = sum_{i=0}^{w-1} (x_i - x_{i+t})^2
 ///
 /// This function is computed efficiently using an FFT. It is assumed that `window_size` is at most half
 /// the length of `signal`.
@@ -242,10 +242,10 @@ pub fn windowed_square_error<T>(
 }
 
 /// Calculate the "cumulative mean normalized difference function" as
-/// specified in the YIN paper. If d(t) is the square error function,
-/// compute `d'(0) = 1` and for `t>0`
+/// specified in the YIN paper. If _d(t)_ is the square error function,
+/// compute _d'(0) = 1_ and for _t > 0_
 ///
-///     `d'(t) = d(t) / [ (1/t) * sum_{i=0}^t d(i) ]`
+///  > d'(t) = d(t) / [ (1/t) * sum_{i=0}^t d(i) ]
 pub fn yin_normalize_square_error<T: Float>(square_error: &mut [T]) {
     let mut sum = T::zero();
     square_error[0] = T::one();
