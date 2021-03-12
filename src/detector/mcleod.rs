@@ -19,7 +19,7 @@ where
     T: Float + std::iter::Sum,
 {
     pub fn new(size: usize, padding: usize) -> Self {
-        let internals = DetectorInternals::new(2, 2, size, padding);
+        let internals = DetectorInternals::new(size, padding);
         McLeodDetector { internals }
     }
 }
@@ -36,26 +36,16 @@ where
         clarity_threshold: T,
     ) -> Option<Pitch<T>> {
         assert_eq!(signal.len(), self.internals.size);
-        assert!(
-            self.internals.has_sufficient_buffers(2, 2),
-            "McLeodDetector requires at least 2 real and 2 complex buffers"
-        );
 
         if square_sum(signal) < power_threshold {
             return None;
         }
+        let result_ref = self.internals.buffers.get_real_buffer();
+        let result = &mut result_ref.borrow_mut()[..];
 
-        let mut iter = self.internals.complex_buffers.iter_mut();
-        let signal_complex = iter.next().unwrap();
-        let scratch0 = iter.next().unwrap();
-
-        let mut iter = self.internals.real_buffers.iter_mut();
-        let scratch1 = iter.next().unwrap();
-        let peaks = iter.next().unwrap();
-
-        normalized_square_difference(signal, signal_complex, scratch0, scratch1, peaks);
+        normalized_square_difference(signal, &mut self.internals.buffers, result);
         pitch_from_peaks(
-            peaks,
+            result,
             sample_rate,
             clarity_threshold,
             PeakCorrection::Quadratic,

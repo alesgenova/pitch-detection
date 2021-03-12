@@ -1,11 +1,8 @@
-use rustfft::num_complex::Complex;
 use rustfft::FftPlanner;
 
-use crate::utils::buffer::copy_real_to_complex;
-use crate::utils::buffer::new_complex_buffer;
-use crate::utils::buffer::new_real_buffer;
 use crate::utils::buffer::ComplexComponent;
 use crate::utils::buffer::{copy_complex_to_real, square_sum};
+use crate::utils::buffer::{copy_real_to_complex, BufferPool};
 use crate::utils::peak::choose_peak;
 use crate::utils::peak::correct_peak;
 use crate::utils::peak::detect_peaks;
@@ -22,59 +19,41 @@ where
 
 /// Data structure to hold any buffers needed for pitch computation.
 /// For WASM it's best to allocate buffers once rather than allocate and
-/// free buffers repeatedly.
+/// free buffers repeatedly, so we use a `BufferPool` object to manage the buffers.
 pub struct DetectorInternals<T>
 where
     T: Float,
 {
     pub size: usize,
     pub padding: usize,
-    pub real_buffers: Vec<Vec<T>>,
-    pub complex_buffers: Vec<Vec<Complex<T>>>,
+    pub buffers: BufferPool<T>,
 }
 
 impl<T> DetectorInternals<T>
 where
     T: Float,
 {
-    pub fn new(
-        n_real_buffers: usize,
-        n_complex_buffers: usize,
-        size: usize,
-        padding: usize,
-    ) -> Self {
-        let real_buffers: Vec<Vec<T>> = (0..n_real_buffers)
-            .map(|_| new_real_buffer(size + padding))
-            .collect();
-
-        let complex_buffers: Vec<Vec<Complex<T>>> = (0..n_complex_buffers)
-            .map(|_| new_complex_buffer(size + padding))
-            .collect();
+    pub fn new(size: usize, padding: usize) -> Self {
+        let buffers = BufferPool::new(size + padding);
 
         DetectorInternals {
             size,
             padding,
-            real_buffers,
-            complex_buffers,
+            buffers,
         }
-    }
-
-    // Check whether there are at least the appropriate number of real and complex buffers.
-    pub fn has_sufficient_buffers(&self, n_real_buffers: usize, n_complex_buffers: usize) -> bool {
-        self.real_buffers.len() >= n_real_buffers && self.complex_buffers.len() >= n_complex_buffers
     }
 }
 
 /// Compute the autocorrelation of `signal` to `result`. All buffers but `signal`
 /// may be used as scratch.
-pub fn autocorrelation<T>(
-    signal: &[T],
-    signal_complex: &mut [Complex<T>],
-    scratch: &mut [Complex<T>],
-    result: &mut [T],
-) where
+pub fn autocorrelation<T>(signal: &[T], buffers: &mut BufferPool<T>, result: &mut [T])
+where
     T: Float,
 {
+    let (ref1, ref2) = (buffers.get_complex_buffer(), buffers.get_complex_buffer());
+    let signal_complex = &mut ref1.borrow_mut()[..];
+    let scratch = &mut ref2.borrow_mut()[..];
+
     let mut planner = FftPlanner::new();
     let fft = planner.plan_fft_forward(signal_complex.len());
     let inv_fft = planner.plan_fft_inverse(signal_complex.len());
@@ -128,22 +107,20 @@ where
     result[signal.len()..].iter_mut().for_each(|r| *r = last);
 }
 
-pub fn normalized_square_difference<T>(
-    signal: &[T],
-    scratch0: &mut [Complex<T>],
-    scratch1: &mut [Complex<T>],
-    scratch2: &mut [T],
-    result: &mut [T],
-) where
+pub fn normalized_square_difference<T>(signal: &[T], buffers: &mut BufferPool<T>, result: &mut [T])
+where
     T: Float + std::iter::Sum,
 {
     let two = T::from_usize(2).unwrap();
 
-    autocorrelation(signal, scratch0, scratch1, result);
-    m_of_tau(signal, Some(result[0]), scratch2);
+    let scratch_ref = buffers.get_real_buffer();
+    let scratch = &mut scratch_ref.borrow_mut()[..];
+
+    autocorrelation(signal, buffers, result);
+    m_of_tau(signal, Some(result[0]), scratch);
     result
         .iter_mut()
-        .zip(scratch2)
+        .zip(scratch)
         .for_each(|(r, s)| *r = two * *r / *s)
 }
 
@@ -157,23 +134,29 @@ pub fn normalized_square_difference<T>(
 pub fn windowed_autocorrelation<T>(
     signal: &[T],
     window_size: usize,
-    (scratch1, scratch2, scratch3): (&mut [Complex<T>], &mut [Complex<T>], &mut [Complex<T>]),
+    buffers: &mut BufferPool<T>,
     result: &mut [T],
 ) where
     T: Float + std::iter::Sum,
 {
     assert!(
-        scratch1.len() >= signal.len() && scratch2.len() >= signal.len(),
-        "`scratch1`/`scratch2` must have a length at least equal to `signal`."
+        buffers.buffer_size >= signal.len(),
+        "Buffers must have a length at least equal to `signal`."
     );
 
     let mut planner = FftPlanner::new();
     let fft = planner.plan_fft_forward(signal.len());
     let inv_fft = planner.plan_fft_inverse(signal.len());
 
-    let signal_complex = &mut scratch1[..signal.len()];
-    let truncated_signal_complex = &mut scratch2[..signal.len()];
-    let scratch = &mut scratch3[..signal.len()];
+    let (scratch_ref1, scratch_ref2, scratch_ref3) = (
+        buffers.get_complex_buffer(),
+        buffers.get_complex_buffer(),
+        buffers.get_complex_buffer(),
+    );
+
+    let signal_complex = &mut scratch_ref1.borrow_mut()[..signal.len()];
+    let truncated_signal_complex = &mut scratch_ref2.borrow_mut()[..signal.len()];
+    let scratch = &mut scratch_ref3.borrow_mut()[..signal.len()];
 
     // To achieve the windowed autocorrelation, we compute the cross correlation between
     // the original signal and the signal truncated to lie in `0..window_size`
@@ -212,7 +195,7 @@ pub fn windowed_autocorrelation<T>(
 pub fn windowed_square_error<T>(
     signal: &[T],
     window_size: usize,
-    (scratch1, scratch2, scratch3): (&mut [Complex<T>], &mut [Complex<T>], &mut [Complex<T>]),
+    buffers: &mut BufferPool<T>,
     result: &mut [T],
 ) where
     T: Float + std::iter::Sum,
@@ -223,11 +206,12 @@ pub fn windowed_square_error<T>(
     );
 
     let two = T::from_f64(2.).unwrap();
+
     // The windowed square error function, d(t), can be computed
     // as d(t) = pow_0^w + pow_t^{t+w} - 2*windowed_autocorrelation(t)
     // where pow_a^b is the sum of the square of `signal` on the window `a..b`
     // We proceed accordingly.
-    windowed_autocorrelation(signal, window_size, (scratch1, scratch2, scratch3), result);
+    windowed_autocorrelation(signal, window_size, buffers, result);
     let mut windowed_power = square_sum(&signal[..window_size]);
     let power = windowed_power;
 
@@ -270,11 +254,7 @@ mod tests {
         let signal: Vec<f64> = vec![0., 1., 2., 0., -1., -2.];
         let window_size: usize = 3;
 
-        let (scratch1, scratch2, scratch3) = (
-            &mut vec![Complex { re: 0., im: 0. }; signal.len()],
-            &mut vec![Complex { re: 0., im: 0. }; signal.len()],
-            &mut vec![Complex { re: 0., im: 0. }; signal.len()],
-        );
+        let buffers = &mut BufferPool::new(signal.len());
 
         let result: Vec<f64> = (0..window_size)
             .map(|i| {
@@ -287,12 +267,7 @@ mod tests {
             .collect();
 
         let mut computed_result = vec![0.; window_size];
-        windowed_autocorrelation(
-            &signal,
-            window_size,
-            (scratch1, scratch2, scratch3),
-            &mut computed_result,
-        );
+        windowed_autocorrelation(&signal, window_size, buffers, &mut computed_result);
         // Using an FFT loses precision; we don't care that much, so round generously.
         computed_result
             .iter_mut()
@@ -306,11 +281,7 @@ mod tests {
         let signal: Vec<f64> = vec![0., 1., 2., 0., -1., -2.];
         let window_size: usize = 3;
 
-        let (scratch1, scratch2, scratch3) = (
-            &mut vec![Complex { re: 0., im: 0. }; signal.len()],
-            &mut vec![Complex { re: 0., im: 0. }; signal.len()],
-            &mut vec![Complex { re: 0., im: 0. }; signal.len()],
-        );
+        let buffers = &mut BufferPool::new(signal.len());
 
         let result: Vec<f64> = (0..window_size)
             .map(|i| {
@@ -323,12 +294,7 @@ mod tests {
             .collect();
 
         let mut computed_result = vec![0.; window_size];
-        windowed_square_error(
-            &signal,
-            window_size,
-            (scratch1, scratch2, scratch3),
-            &mut computed_result,
-        );
+        windowed_square_error(&signal, window_size, buffers, &mut computed_result);
         // Using an FFT loses precision; we don't care that much, so round generously.
         computed_result
             .iter_mut()
