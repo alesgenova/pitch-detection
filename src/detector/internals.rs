@@ -46,13 +46,14 @@ where
 
 /// Compute the autocorrelation of `signal` to `result`. All buffers but `signal`
 /// may be used as scratch.
-pub fn autocorrelation<T>(signal: &[T], buffers: &mut BufferPool<T>, result: &mut [T])
+pub fn autocorrelation<T>(signal: &[T], buffers: &BufferPool<T>, result: &mut [T])
 where
     T: Float,
 {
-    let (ref1, ref2) = (buffers.get_complex_buffer(), buffers.get_complex_buffer());
-    let signal_complex = &mut ref1.borrow_mut()[..];
-    let scratch = &mut ref2.borrow_mut()[..];
+    let (signal_complex, scratch) = (
+        &mut buffers.get_complex_buffer(),
+        &mut buffers.get_complex_buffer(),
+    );
 
     let mut planner = FftPlanner::new();
     let fft = planner.plan_fft_forward(signal_complex.len());
@@ -107,14 +108,13 @@ where
     result[signal.len()..].iter_mut().for_each(|r| *r = last);
 }
 
-pub fn normalized_square_difference<T>(signal: &[T], buffers: &mut BufferPool<T>, result: &mut [T])
+pub fn normalized_square_difference<T>(signal: &[T], buffers: &BufferPool<T>, result: &mut [T])
 where
     T: Float + std::iter::Sum,
 {
     let two = T::from_usize(2).unwrap();
 
-    let scratch_ref = buffers.get_real_buffer();
-    let scratch = &mut scratch_ref.borrow_mut()[..];
+    let scratch = &mut buffers.get_real_buffer()[..];
 
     autocorrelation(signal, buffers, result);
     m_of_tau(signal, Some(result[0]), scratch);
@@ -134,7 +134,7 @@ where
 pub fn windowed_autocorrelation<T>(
     signal: &[T],
     window_size: usize,
-    buffers: &mut BufferPool<T>,
+    buffers: &BufferPool<T>,
     result: &mut [T],
 ) where
     T: Float + std::iter::Sum,
@@ -148,15 +148,11 @@ pub fn windowed_autocorrelation<T>(
     let fft = planner.plan_fft_forward(signal.len());
     let inv_fft = planner.plan_fft_inverse(signal.len());
 
-    let (scratch_ref1, scratch_ref2, scratch_ref3) = (
-        buffers.get_complex_buffer(),
-        buffers.get_complex_buffer(),
-        buffers.get_complex_buffer(),
+    let (signal_complex, truncated_signal_complex, scratch) = (
+        &mut buffers.get_complex_buffer()[..signal.len()],
+        &mut buffers.get_complex_buffer()[..signal.len()],
+        &mut buffers.get_complex_buffer()[..signal.len()],
     );
-
-    let signal_complex = &mut scratch_ref1.borrow_mut()[..signal.len()];
-    let truncated_signal_complex = &mut scratch_ref2.borrow_mut()[..signal.len()];
-    let scratch = &mut scratch_ref3.borrow_mut()[..signal.len()];
 
     // To achieve the windowed autocorrelation, we compute the cross correlation between
     // the original signal and the signal truncated to lie in `0..window_size`
@@ -195,7 +191,7 @@ pub fn windowed_autocorrelation<T>(
 pub fn windowed_square_error<T>(
     signal: &[T],
     window_size: usize,
-    buffers: &mut BufferPool<T>,
+    buffers: &BufferPool<T>,
     result: &mut [T],
 ) where
     T: Float + std::iter::Sum,

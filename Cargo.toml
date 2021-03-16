@@ -12,6 +12,7 @@ categories = ["algorithms", "multimedia::audio", "no-std"]
 readme = "README.md"
 
 [dependencies]
+object-pool = "0.5.3"
 rustfft = { version = "5.0.1", default-features = false }
 
 [dev-dependencies]

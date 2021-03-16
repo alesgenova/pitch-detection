@@ -40,10 +40,9 @@ where
         if square_sum(signal) < power_threshold {
             return None;
         }
-        let result_ref = self.internals.buffers.get_real_buffer();
-        let result = &mut result_ref.borrow_mut()[..];
+        let result = &mut self.internals.buffers.get_real_buffer();
 
-        normalized_square_difference(signal, &mut self.internals.buffers, result);
+        normalized_square_difference(signal, &self.internals.buffers, result);
         pitch_from_peaks(
             result,
             sample_rate,
