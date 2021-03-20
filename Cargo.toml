@@ -16,6 +16,7 @@ rustfft = { version = "5.0.1", default-features = false }
 
 [dev-dependencies]
 criterion = "0.3"
+hound = { version = "3.4.0" }
 
 [[bench]]
 name = "utils_benchmark"
