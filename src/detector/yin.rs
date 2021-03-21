@@ -72,7 +72,13 @@ where
         result.iter_mut().for_each(|val| *val = threshold - *val);
 
         // STEP 5: Find the peak and use quadratic interpolation to fine-tune the result
-        pitch_from_peaks(result, sample_rate, T::zero(), PeakCorrection::Quadratic)
+        pitch_from_peaks(result, sample_rate, T::zero(), PeakCorrection::Quadratic).map(|pitch| {
+            Pitch {
+                frequency: pitch.frequency,
+                // A `clarity` is not given by the YIN algorithm, so set it to the maximum value.
+                clarity: T::one(),
+            }
+        })
 
         // STEP 6: TODO. Step 6 of the YIN paper can eek out a little more accuracy/consistency, but
         // it also involves computing over a much larger window.
