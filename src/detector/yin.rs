@@ -75,8 +75,10 @@ where
         pitch_from_peaks(result, sample_rate, T::zero(), PeakCorrection::Quadratic).map(|pitch| {
             Pitch {
                 frequency: pitch.frequency,
-                // A `clarity` is not given by the YIN algorithm, so set it to the maximum value.
-                clarity: T::one(),
+                // A `clarity` is not given by the YIN algorithm. However, we can
+                // say a pitch has higher clarity if it's YIN normalized square error is closer to zero.
+                // We can then take 1 - YIN error and report that as `clarity`.
+                clarity: T::one() - threshold + pitch.clarity / threshold,
             }
         })
 
