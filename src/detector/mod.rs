@@ -4,6 +4,7 @@ use crate::float::Float;
 pub mod autocorrelation;
 pub mod internals;
 pub mod mcleod;
+pub mod yin;
 
 pub trait PitchDetector<T>
 where
