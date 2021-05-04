@@ -35,11 +35,8 @@ pub fn pitch_detect_benchmark(c: &mut Criterion) {
         .map(|x| (2.0 * std::f64::consts::PI * x as f64 * dt * freq).sin())
         .collect();
 
-    let mut mcleod_detector = McLeodDetector::new(SIZE, PADDING);
-    let mut autocorrelation_detector = AutocorrelationDetector::new(SIZE, PADDING);
-    let mut yin_detector = YINDetector::new(SIZE, PADDING);
-
     c.bench_function("McLeod get_pitch", |b| {
+        let mut mcleod_detector = McLeodDetector::new(SIZE, PADDING);
         b.iter(|| {
             mcleod_detector
                 .get_pitch(
@@ -53,6 +50,7 @@ pub fn pitch_detect_benchmark(c: &mut Criterion) {
     });
 
     c.bench_function("Autocorrelation get_pitch", |b| {
+        let mut autocorrelation_detector = AutocorrelationDetector::new(SIZE, PADDING);
         b.iter(|| {
             autocorrelation_detector
                 .get_pitch(
@@ -65,6 +63,7 @@ pub fn pitch_detect_benchmark(c: &mut Criterion) {
         });
     });
     c.bench_function("YIN get_pitch", |b| {
+        let mut yin_detector = YINDetector::new(SIZE, PADDING);
         b.iter(|| {
             yin_detector
                 .get_pitch(

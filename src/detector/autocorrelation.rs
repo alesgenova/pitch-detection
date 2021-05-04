@@ -18,7 +18,7 @@ where
     T: Float,
 {
     pub fn new(size: usize, padding: usize) -> Self {
-        let internals = DetectorInternals::new(1, 2, size, padding);
+        let internals = DetectorInternals::new(size, padding);
         AutocorrelationDetector { internals }
     }
 }
@@ -35,30 +35,16 @@ where
         clarity_threshold: T,
     ) -> Option<Pitch<T>> {
         assert_eq!(signal.len(), self.internals.size);
-        assert!(
-            self.internals.has_sufficient_buffers(1, 2),
-            "McLeodDetector requires at least 1 real and 2 complex buffers"
-        );
 
         if square_sum(signal) < power_threshold {
             return None;
         }
 
-        let mut iter = self.internals.complex_buffers.iter_mut();
-        let signal_complex = iter.next().unwrap();
-        let scratch = iter.next().unwrap();
+        let result = &mut self.internals.buffers.get_real_buffer()[..];
 
-        let mut iter = self.internals.real_buffers.iter_mut();
-        let autocorr = iter.next().unwrap();
+        autocorrelation(signal, &self.internals.buffers, result);
+        let clarity_threshold = clarity_threshold * result[0];
 
-        autocorrelation(signal, signal_complex, scratch, autocorr);
-        let clarity_threshold = clarity_threshold * autocorr[0];
-
-        pitch_from_peaks(
-            autocorr,
-            sample_rate,
-            clarity_threshold,
-            PeakCorrection::None,
-        )
+        pitch_from_peaks(result, sample_rate, clarity_threshold, PeakCorrection::None)
     }
 }
