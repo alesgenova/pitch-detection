@@ -1,3 +1,27 @@
+//! The YIN pitch detection algorithm is based on the algorithm from the paper
+//! *[YIN, a fundamental frequency estimator for speech and music](http://recherche.ircam.fr/equipes/pcm/cheveign/ps/2002_JASA_YIN_proof.pdf)*.
+//! It is efficient and offers an improvement over basic autocorrelation.
+//!
+//! The YIN pitch detection algorithm is similar to the [McLeod][crate::detector::mcleod], but it is based on
+//! a different normalization of the *mean square difference function*.
+//!
+//! Let $S=(s_0,s_1,\ldots,s_N)$ be a discrete signal. The *mean square difference function* at time $t$
+//! is defined by
+//! $$ d(t) = \sum_{i=0}^{N-t} (s_i-s_{i+t})^2. $$
+//! This function is close to zero when the signal "lines up" with itself. However, *close* is a relative term,
+//! and the value of $d\'(t)$ depends on volume, which should not affect the pitch of the signal. For this
+//! reason, the signal is normalized. The YIN algorithm computes the *cumulative mean normalized difference function*,
+//! $$ d\'(t) = \begin{cases}1&\text{if }t=0\\\\ d(t) / \left[ \tfrac{1}{t}\sum_{i=0}^t d(i) \right] & \text{otherwise}\end{cases}. $$
+//! Then, it searches for the first local minimum of $d\'(t)$ below a given threshold.
+//!
+//! ## Implementation
+//! Rather than compute the cumulative mean normalized difference function directly,
+//! an [FFT](https://en.wikipedia.org/wiki/Fast_Fourier_transform) is used, providing a dramatic speed increase for large buffers.
+//!
+//! After a candidate frequency is found, quadratic interpolation is applied to further refine the estimate.
+//!
+//! The current implementation does not perform *Step 6* of the algorithm specified in the YIN paper.
+
 use crate::detector::internals::pitch_from_peaks;
 use crate::detector::internals::Pitch;
 use crate::detector::PitchDetector;
@@ -6,8 +30,6 @@ use crate::utils::buffer::square_sum;
 use crate::utils::peak::PeakCorrection;
 
 use super::internals::{windowed_square_error, yin_normalize_square_error, DetectorInternals};
-
-/// Pitch detection based on the YIN algorithm. See http://recherche.ircam.fr/equipes/pcm/cheveign/ps/2002_JASA_YIN_proof.pdf
 
 pub struct YINDetector<T>
 where

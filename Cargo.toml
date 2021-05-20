@@ -19,6 +19,10 @@ rustfft = { version = "5.0.1", default-features = false }
 criterion = "0.3"
 hound = { version = "3.4.0" }
 
+[package.metadata.docs.rs]
+# Including this header allows for math to be rendered in the docs.
+rustdoc-args = ["--html-in-header", "./src/docs-header.html"]
+
 [[bench]]
 name = "utils_benchmark"
 harness = false

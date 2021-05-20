@@ -34,3 +34,12 @@ fn main() {
 ## Live Demo
 [![Demo Page](https://raw.githubusercontent.com/alesgenova/pitch-detection-app/master/demo.png)](https://alesgenova.github.io/pitch-detection-app/)
 [Source](https://github.com/alesgenova/pitch-detection-app)
+
+## Documentation
+LaTeX formulas can be used in documentation. This is enabled by a method outlined in [rust-latex-doc-minimal-example](https://github.com/victe/rust-latex-doc-minimal-example). To build the docs, use
+```
+cargo doc --no-deps
+```
+The `--no-deps` flag is needed because special headers are included to auto-process the math in the documentation. This
+header is specified using a relative path and so an error is produced if `cargo` tries generate documentation for
+dependencies.
