@@ -67,6 +67,7 @@ fn yin_triangle_signal() {
     pure_frequency(String::from("YIN"), String::from("triangle"), 440.0);
 }
 
+#[test]
 fn autocorrelation_violin_d4() {
     let signal: Signal<f64> = wav_file_to_signal(samples_path("violin-D4.wav"), 0, 10 * 1024);
 
