@@ -9,6 +9,8 @@ use crate::utils::peak::detect_peaks;
 use crate::utils::peak::PeakCorrection;
 use crate::{float::Float, utils::buffer::modulus_squared};
 
+/// A pitch's `frequency` as well as `clarity`, which is a measure
+/// of confidence in the pitch detection.
 pub struct Pitch<T>
 where
     T: Float,

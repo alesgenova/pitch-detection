@@ -1,0 +1,3 @@
+[build]
+# Including this header allows for math to be rendered in the docs.
+rustdocflags = ["--html-in-header", "./src/docs-header.html"]
