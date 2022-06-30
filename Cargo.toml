@@ -3,7 +3,7 @@ name = "pitch-detection"
 description = "A collection of algorithms to determine the pitch of a sound sample."
 version = "0.2.0"
 authors = ["Alessandro Genova <ales.genova@gmail.com>"]
-edition = "2018"
+edition = "2021"
 license = "MIT/Apache-2.0"
 homepage = "https://github.com/alesgenova/pitch-detection"
 repository = "https://github.com/alesgenova/pitch-detection"
@@ -13,15 +13,11 @@ readme = "README.md"
 
 [dependencies]
 object-pool = "0.5.3"
-rustfft = { version = "5.0.1", default-features = false }
+rustfft = { version = "6.0.1", default-features = false }
 
 [dev-dependencies]
 criterion = "0.3"
 hound = { version = "3.4.0" }
-
-[package.metadata.docs.rs]
-# Including this header allows for math to be rendered in the docs.
-rustdoc-args = ["--html-in-header", "./src/docs-header.html"]
 
 [[bench]]
 name = "utils_benchmark"

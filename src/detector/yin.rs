@@ -48,7 +48,7 @@ where
     }
 }
 
-/// Pitch detection based on the YIN algorithm. See http://recherche.ircam.fr/equipes/pcm/cheveign/ps/2002_JASA_YIN_proof.pdf
+/// Pitch detection based on the YIN algorithm. See <http://recherche.ircam.fr/equipes/pcm/cheveign/ps/2002_JASA_YIN_proof.pdf>
 impl<T> PitchDetector<T> for YINDetector<T>
 where
     T: Float + std::iter::Sum,
