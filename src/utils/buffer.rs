@@ -1,6 +1,6 @@
-use object_pool::{Pool, Reusable};
 use rustfft::num_complex::Complex;
 use rustfft::num_traits::Zero;
+use std::{cell::RefCell, rc::Rc};
 
 use crate::float::Float;
 
@@ -79,88 +79,115 @@ where
     arr.iter().map(|&s| s * s).sum::<T>()
 }
 
+#[derive(Debug)]
 /// A pool of real/complex buffer objects. Buffers are dynamically created as needed
 /// and reused if previously `Drop`ed. Buffers are never freed. Instead buffers are kept
 /// in reserve and reused when a new buffer is requested.
 ///
 /// ```rust
-/// use pitch_detection::utils::buffer::BufferPool;
+///  use pitch_detection::utils::buffer::BufferPool;
 ///
-/// let buffers = BufferPool::new(3);
-/// let mut buf1 = buffers.get_real_buffer();
-/// {
-///     // This buffer won't be dropped until the end of the function
-///     buf1[0] = 5.5;
-/// }
-/// {
-///     // This buffer will be dropped when the scope ends
-///     let mut buf2 = buffers.get_real_buffer();
-///     buf2[1] = 6.6;
-/// }
-/// {
-///     // This buffer will be dropped when the scope ends
-///     // It is the same buffer that was just used (i.e., it's a reused buffer)
-///     let mut buf3 = buffers.get_real_buffer();
-///     buf3[2] = 7.7;
-/// }
-/// drop(buf1);
-///
-/// let buf1 = &buffers.get_real_buffer();
-/// let buf2 = &buffers.get_real_buffer();
-/// // Buffers are distributed in LIFO order, so compare them "backwards".
-/// assert_eq!(&buf2[..], &[0.0, 6.6, 7.7]);
-/// assert_eq!(&buf1[..], &[5.5, 0., 0.]);
+///  let mut buffers = BufferPool::new(3);
+///  let buf_cell1 = buffers.get_real_buffer();
+///  {
+///      // This buffer won't be dropped until the end of the function
+///      let mut buf1 = buf_cell1.borrow_mut();
+///      buf1[0] = 5.5;
+///  }
+///  {
+///      // This buffer will be dropped when the scope ends
+///      let buf_cell2 = buffers.get_real_buffer();
+///      let mut buf2 = buf_cell2.borrow_mut();
+///      buf2[1] = 6.6;
+///  }
+///  {
+///      // This buffer will be dropped when the scope ends
+///      // It is the same buffer that was just used (i.e., it's a reused buffer)
+///      let buf_cell3 = buffers.get_real_buffer();
+///      let mut buf3 = buf_cell3.borrow_mut();
+///      buf3[2] = 7.7;
+///  }
+///  // The first buffer we asked for should not have been reused.
+///  assert_eq!(&buf_cell1.borrow()[..], &[5.5, 0., 0.]);
+///  let buf_cell2 = buffers.get_real_buffer();
+///  // The second buffer was reused because it was dropped and then another buffer was requested.
+///  assert_eq!(&buf_cell2.borrow()[..], &[0.0, 6.6, 7.7]);
 /// ```
 pub struct BufferPool<T> {
-    real_buffers: Pool<Vec<T>>,
-    complex_buffers: Pool<Vec<Complex<T>>>,
+    real_buffers: Vec<Rc<RefCell<Vec<T>>>>,
+    complex_buffers: Vec<Rc<RefCell<Vec<Complex<T>>>>>,
     pub buffer_size: usize,
 }
 
 impl<T: Float> BufferPool<T> {
     pub fn new(buffer_size: usize) -> Self {
         BufferPool {
-            real_buffers: Pool::new(0, || new_real_buffer(buffer_size)),
-            complex_buffers: Pool::new(0, || new_complex_buffer(buffer_size)),
+            real_buffers: vec![],
+            complex_buffers: vec![],
             buffer_size,
         }
     }
-    /// Get a reference to a buffer that can be used until it is `Drop`ed.
-    pub fn get_real_buffer(&self) -> Reusable<Vec<T>> {
-        self.real_buffers.pull(|| new_real_buffer(self.buffer_size))
+    fn add_real_buffer(&mut self) -> Rc<RefCell<Vec<T>>> {
+        self.real_buffers
+            .push(Rc::new(RefCell::new(new_real_buffer::<T>(
+                self.buffer_size,
+            ))));
+        Rc::clone(&self.real_buffers.last().unwrap())
     }
-    /// Get a reference to a buffer that can be used until it is `Drop`ed.
-    pub fn get_complex_buffer(&self) -> Reusable<Vec<Complex<T>>> {
+    fn add_complex_buffer(&mut self) -> Rc<RefCell<Vec<Complex<T>>>> {
         self.complex_buffers
-            .pull(|| new_complex_buffer(self.buffer_size))
+            .push(Rc::new(RefCell::new(new_complex_buffer::<T>(
+                self.buffer_size,
+            ))));
+        Rc::clone(&self.complex_buffers.last().unwrap())
+    }
+    /// Get a reference to a buffer that can e used until it is `Drop`ed. Call
+    /// `.borrow_mut()` to get a reference to a mutable version of the buffer.
+    pub fn get_real_buffer(&mut self) -> Rc<RefCell<Vec<T>>> {
+        self.real_buffers
+            .iter()
+            // If the Rc count is 1, we haven't loaned the buffer out yet.
+            .find(|&buf| Rc::strong_count(buf) == 1)
+            .map(|buf| Rc::clone(buf))
+            // If we haven't found a buffer we can reuse, create one.
+            .unwrap_or_else(|| self.add_real_buffer())
+    }
+    /// Get a reference to a buffer that can e used until it is `Drop`ed. Call
+    /// `.borrow_mut()` to get a reference to a mutable version of the buffer.
+    pub fn get_complex_buffer(&mut self) -> Rc<RefCell<Vec<Complex<T>>>> {
+        self.complex_buffers
+            .iter()
+            // If the Rc count is 1, we haven't loaned the buffer out yet.
+            .find(|&buf| Rc::strong_count(buf) == 1)
+            .map(|buf| Rc::clone(buf))
+            // If we haven't found a buffer we can reuse, create one.
+            .unwrap_or_else(|| self.add_complex_buffer())
     }
 }
 
 #[test]
 fn test_buffers() {
-    let buffers = BufferPool::new(3);
-    let mut buf1 = buffers.get_real_buffer();
+    let mut buffers = BufferPool::new(3);
+    let buf_cell1 = buffers.get_real_buffer();
     {
         // This buffer won't be dropped until the end of the function
-        // or a manual call to `drop`.
+        let mut buf1 = buf_cell1.borrow_mut();
         buf1[0] = 5.5;
     }
     {
         // This buffer will be dropped when the scope ends
-        let mut buf2 = buffers.get_real_buffer();
+        let buf_cell2 = buffers.get_real_buffer();
+        let mut buf2 = buf_cell2.borrow_mut();
         buf2[1] = 6.6;
     }
     {
         // This buffer will be dropped when the scope ends
         // It is the same buffer that was just used (i.e., it's a reused buffer)
-        let mut buf3 = buffers.get_real_buffer();
+        let buf_cell3 = buffers.get_real_buffer();
+        let mut buf3 = buf_cell3.borrow_mut();
         buf3[2] = 7.7;
     }
-    drop(buf1);
-
-    let buf1 = &buffers.get_real_buffer();
-    let buf2 = &buffers.get_real_buffer();
-    // Buffers are distributed in LIFO order, so compare them "backwards".
-    assert_eq!(&buf2[..], &[0.0, 6.6, 7.7]);
-    assert_eq!(&buf1[..], &[5.5, 0., 0.]);
+    // We're peering into the internals of `BufferPool`. This shouldn't normally be done.
+    assert_eq!(&buffers.real_buffers[0].borrow()[..], &[5.5, 0., 0.]);
+    assert_eq!(&buffers.real_buffers[1].borrow()[..], &[0.0, 6.6, 7.7]);
 }
