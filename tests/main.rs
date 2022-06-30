@@ -1,4 +1,5 @@
 use std::path::PathBuf;
+
 use pitch_detection::detector::mcleod::McLeodDetector;
 use pitch_detection::detector::PitchDetector;
 use pitch_detection::detector::{autocorrelation::AutocorrelationDetector, yin::YINDetector};

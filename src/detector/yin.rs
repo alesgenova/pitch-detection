@@ -48,7 +48,7 @@ where
     }
 }
 
-/// Pitch detection based on the YIN algorithm. See http://recherche.ircam.fr/equipes/pcm/cheveign/ps/2002_JASA_YIN_proof.pdf
+/// Pitch detection based on the YIN algorithm. See <http://recherche.ircam.fr/equipes/pcm/cheveign/ps/2002_JASA_YIN_proof.pdf>
 impl<T> PitchDetector<T> for YINDetector<T>
 where
     T: Float + std::iter::Sum,
@@ -71,10 +71,11 @@ where
             return None;
         }
 
-        let result = &mut self.internals.buffers.get_real_buffer()[..window_size];
+        let result_ref = self.internals.buffers.get_real_buffer();
+        let result = &mut result_ref.borrow_mut()[..window_size];
 
         // STEP 2: Calculate the difference function, d_t.
-        windowed_square_error(signal, window_size, &self.internals.buffers, result);
+        windowed_square_error(signal, window_size, &mut self.internals.buffers, result);
 
         // STEP 3: Calculate the cumulative mean normalized difference function, d_t'.
         yin_normalize_square_error(result);

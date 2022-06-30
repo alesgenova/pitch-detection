@@ -56,9 +56,10 @@ where
             return None;
         }
 
-        let result = &mut self.internals.buffers.get_real_buffer()[..];
+        let result_ref = self.internals.buffers.get_real_buffer();
+        let result = &mut result_ref.borrow_mut()[..];
 
-        autocorrelation(signal, &self.internals.buffers, result);
+        autocorrelation(signal, &mut self.internals.buffers, result);
         let clarity_threshold = clarity_threshold * result[0];
 
         pitch_from_peaks(result, sample_rate, clarity_threshold, PeakCorrection::None)
