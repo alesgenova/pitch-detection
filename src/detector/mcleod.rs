@@ -47,7 +47,7 @@ where
 
 impl<T> PitchDetector<T> for McLeodDetector<T>
 where
-    T: Float + std::iter::Sum,
+    T: Float + std::iter::Sum + Default,
 {
     fn get_pitch(
         &mut self,

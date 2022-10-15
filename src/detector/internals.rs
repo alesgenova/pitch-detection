@@ -1,4 +1,4 @@
-use rustfft::FftPlanner;
+use easyfft::prelude::*;
 
 use crate::utils::buffer::ComplexComponent;
 use crate::utils::buffer::{copy_complex_to_real, square_sum};
@@ -48,23 +48,19 @@ where
 
 /// Compute the autocorrelation of `signal` to `result`. All buffers but `signal`
 /// may be used as scratch.
-pub fn autocorrelation<T>(signal: &[T], buffers: &mut BufferPool<T>, result: &mut [T])
+pub fn autocorrelation<T: Default>(signal: &[T], buffers: &mut BufferPool<T>, result: &mut [T])
 where
     T: Float,
+    T: std::default::Default,
 {
-    let (ref1, ref2) = (buffers.get_complex_buffer(), buffers.get_complex_buffer());
-    let signal_complex = &mut ref1.borrow_mut()[..];
-    let scratch = &mut ref2.borrow_mut()[..];
-
-    let mut planner = FftPlanner::new();
-    let fft = planner.plan_fft_forward(signal_complex.len());
-    let inv_fft = planner.plan_fft_inverse(signal_complex.len());
+    let ref1 = buffers.get_complex_buffer();
+    let signal_complex = &mut ref1.borrow_mut();
 
     // Compute the autocorrelation
     copy_real_to_complex(signal, signal_complex, ComplexComponent::Re);
-    fft.process_with_scratch(signal_complex, scratch);
+    signal_complex.fft_mut();
     modulus_squared(signal_complex);
-    inv_fft.process_with_scratch(signal_complex, scratch);
+    signal_complex.ifft_mut();
     copy_complex_to_real(signal_complex, result, ComplexComponent::Re);
 }
 
@@ -109,8 +105,11 @@ where
     result[signal.len()..].iter_mut().for_each(|r| *r = last);
 }
 
-pub fn normalized_square_difference<T>(signal: &[T], buffers: &mut BufferPool<T>, result: &mut [T])
-where
+pub fn normalized_square_difference<T: Default>(
+    signal: &[T],
+    buffers: &mut BufferPool<T>,
+    result: &mut [T],
+) where
     T: Float + std::iter::Sum,
 {
     let two = T::from_usize(2).unwrap();
@@ -140,25 +139,17 @@ pub fn windowed_autocorrelation<T>(
     result: &mut [T],
 ) where
     T: Float + std::iter::Sum,
+    T: std::default::Default,
 {
     assert!(
         buffers.buffer_size >= signal.len(),
         "Buffers must have a length at least equal to `signal`."
     );
 
-    let mut planner = FftPlanner::new();
-    let fft = planner.plan_fft_forward(signal.len());
-    let inv_fft = planner.plan_fft_inverse(signal.len());
-
-    let (scratch_ref1, scratch_ref2, scratch_ref3) = (
-        buffers.get_complex_buffer(),
-        buffers.get_complex_buffer(),
-        buffers.get_complex_buffer(),
-    );
+    let (scratch_ref1, scratch_ref2) = (buffers.get_complex_buffer(), buffers.get_complex_buffer());
 
     let signal_complex = &mut scratch_ref1.borrow_mut()[..signal.len()];
     let truncated_signal_complex = &mut scratch_ref2.borrow_mut()[..signal.len()];
-    let scratch = &mut scratch_ref3.borrow_mut()[..signal.len()];
 
     // To achieve the windowed autocorrelation, we compute the cross correlation between
     // the original signal and the signal truncated to lie in `0..window_size`
@@ -168,9 +159,9 @@ pub fn windowed_autocorrelation<T>(
         truncated_signal_complex,
         ComplexComponent::Re,
     );
-    fft.process_with_scratch(signal_complex, scratch);
-    fft.process_with_scratch(truncated_signal_complex, scratch);
-    // rustfft doesn't normalize when it computes the fft, so we need to normalize ourselves by
+    signal_complex.fft_mut();
+    truncated_signal_complex.fft_mut();
+    // easyfft doesn't normalize when it computes the fft, so we need to normalize ourselves by
     // dividing by `sqrt(signal.len())` each time we take an fft or inverse fft.
     // Since the fft is linear and we are doing fft -> inverse fft, we can just divide by
     // `signal.len()` once.
@@ -181,7 +172,7 @@ pub fn windowed_autocorrelation<T>(
         .for_each(|(a, b)| {
             *a = *a * normalization_const * b.conj();
         });
-    inv_fft.process_with_scratch(signal_complex, scratch);
+    signal_complex.ifft_mut();
 
     // The result is valid only for `0..window_size`
     copy_complex_to_real(&signal_complex[..window_size], result, ComplexComponent::Re);
@@ -194,7 +185,7 @@ pub fn windowed_autocorrelation<T>(
 ///
 /// This function is computed efficiently using an FFT. It is assumed that `window_size` is at most half
 /// the length of `signal`.
-pub fn windowed_square_error<T>(
+pub fn windowed_square_error<T: Default>(
     signal: &[T],
     window_size: usize,
     buffers: &mut BufferPool<T>,

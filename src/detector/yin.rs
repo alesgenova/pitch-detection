@@ -51,7 +51,7 @@ where
 /// Pitch detection based on the YIN algorithm. See <http://recherche.ircam.fr/equipes/pcm/cheveign/ps/2002_JASA_YIN_proof.pdf>
 impl<T> PitchDetector<T> for YINDetector<T>
 where
-    T: Float + std::iter::Sum,
+    T: Float + std::iter::Sum + Default,
 {
     fn get_pitch(
         &mut self,
