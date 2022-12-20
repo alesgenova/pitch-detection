@@ -57,7 +57,7 @@ where
         }
 
         let result_ref = self.internals.buffers.get_real_buffer();
-        let result = &mut result_ref.borrow_mut()[..];
+        let result = &mut result_ref.write().unwrap()[..];
 
         autocorrelation(signal, &mut self.internals.buffers, result);
         let clarity_threshold = clarity_threshold * result[0];

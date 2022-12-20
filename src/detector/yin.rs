@@ -72,7 +72,7 @@ where
         }
 
         let result_ref = self.internals.buffers.get_real_buffer();
-        let result = &mut result_ref.borrow_mut()[..window_size];
+        let result = &mut result_ref.write().unwrap()[..window_size];
 
         // STEP 2: Calculate the difference function, d_t.
         windowed_square_error(signal, window_size, &mut self.internals.buffers, result);
