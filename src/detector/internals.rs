@@ -53,8 +53,8 @@ where
     T: Float,
 {
     let (ref1, ref2) = (buffers.get_complex_buffer(), buffers.get_complex_buffer());
-    let signal_complex = &mut ref1.borrow_mut()[..];
-    let scratch = &mut ref2.borrow_mut()[..];
+    let signal_complex = &mut ref1.write().unwrap()[..];
+    let scratch = &mut ref2.write().unwrap()[..];
 
     let mut planner = FftPlanner::new();
     let fft = planner.plan_fft_forward(signal_complex.len());
@@ -116,7 +116,7 @@ where
     let two = T::from_usize(2).unwrap();
 
     let scratch_ref = buffers.get_real_buffer();
-    let scratch = &mut scratch_ref.borrow_mut()[..];
+    let scratch = &mut scratch_ref.write().unwrap()[..];
 
     autocorrelation(signal, buffers, result);
     m_of_tau(signal, Some(result[0]), scratch);
@@ -156,9 +156,9 @@ pub fn windowed_autocorrelation<T>(
         buffers.get_complex_buffer(),
     );
 
-    let signal_complex = &mut scratch_ref1.borrow_mut()[..signal.len()];
-    let truncated_signal_complex = &mut scratch_ref2.borrow_mut()[..signal.len()];
-    let scratch = &mut scratch_ref3.borrow_mut()[..signal.len()];
+    let signal_complex = &mut scratch_ref1.write().unwrap()[..signal.len()];
+    let truncated_signal_complex = &mut scratch_ref2.write().unwrap()[..signal.len()];
+    let scratch = &mut scratch_ref3.write().unwrap()[..signal.len()];
 
     // To achieve the windowed autocorrelation, we compute the cross correlation between
     // the original signal and the signal truncated to lie in `0..window_size`

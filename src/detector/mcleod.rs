@@ -62,7 +62,7 @@ where
             return None;
         }
         let result_ref = self.internals.buffers.get_real_buffer();
-        let result = &mut result_ref.borrow_mut()[..];
+        let result = &mut result_ref.write().unwrap()[..];
 
         normalized_square_difference(signal, &mut self.internals.buffers, result);
         pitch_from_peaks(
