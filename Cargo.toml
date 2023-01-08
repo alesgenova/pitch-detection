@@ -12,7 +12,8 @@ categories = ["algorithms", "multimedia::audio", "no-std"]
 readme = "README.md"
 
 [dependencies]
-rustfft = { version = "6.0.1", default-features = false }
+num-traits = "0.2.15"
+easyfft = "0.3.3"
 
 [dev-dependencies]
 criterion = "0.3"

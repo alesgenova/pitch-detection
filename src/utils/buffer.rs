@@ -1,5 +1,5 @@
-use rustfft::num_complex::Complex;
-use rustfft::num_traits::Zero;
+use easyfft::num_complex::Complex;
+use num_traits::Zero;
 use std::{cell::RefCell, rc::Rc};
 
 use crate::float::Float;
